@@ -1,5 +1,5 @@
 /* eslint react/no-did-mount-set-state: 0, react/no-find-dom-node: 0 */
-import React, { ComponentClass } from 'react';
+import React from 'react';
 import ReactDOM from 'react-dom';
 
 const emptyRect = {
@@ -20,26 +20,41 @@ type rectShape = {
   height: number;
 };
 
-export type WithBoundingRectsProps = {
-  getRects?: () => { rect: rectShape; parentRect: rectShape };
+type WithBoundingRectsState = {
   rect?: rectShape;
   parentRect?: rectShape;
+};
+
+type WithBoundingRectsInternalProps = {
+  getRects?: () => { rect: rectShape; parentRect: rectShape };
   nodeRef?: React.RefObject<HTMLElement>;
 };
 
-export default function withBoundingRects<Props extends object = {}>(
+type WithBoundingRectsProvidedProps = WithBoundingRectsInternalProps & WithBoundingRectsState;
+
+export type WithBoundingRectsProps = WithBoundingRectsProvidedProps;
+
+type WithBoundingRectsComponentProps<P extends WithBoundingRectsProvidedProps> = Omit<
+  P,
+  keyof WithBoundingRectsProvidedProps
+>;
+
+export default function withBoundingRects<Props extends WithBoundingRectsProvidedProps>(
   BaseComponent: React.ComponentType<Props>,
-): ComponentClass<Props> {
-  return class WrappedComponent extends React.PureComponent<Props> {
+): React.ComponentClass<WithBoundingRectsComponentProps<Props>> {
+  return class WrappedComponent extends React.Component<
+    WithBoundingRectsComponentProps<Props>,
+    WithBoundingRectsState
+  > {
     static displayName = `withBoundingRects(${BaseComponent.displayName || ''})`;
+    state = {
+      rect: undefined,
+      parentRect: undefined,
+    };
     node: HTMLElement | undefined | null;
     nodeRef: React.RefObject<HTMLElement>;
-    constructor(props: Props) {
+    constructor(props: WithBoundingRectsComponentProps<Props>) {
       super(props);
-      this.state = {
-        rect: undefined,
-        parentRect: undefined,
-      };
       this.nodeRef = React.createRef();
       this.getRects = this.getRects.bind(this);
     }
@@ -72,7 +87,7 @@ export default function withBoundingRects<Props extends object = {}>(
           nodeRef={this.nodeRef}
           getRects={this.getRects}
           {...this.state}
-          {...this.props}
+          {...(this.props as Props)}
         />
       );
     }
